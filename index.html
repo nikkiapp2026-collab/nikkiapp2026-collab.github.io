@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- よそのサイトから何も読み込まない(この住所の中のファイルだけ)。通信は、同期のときのグーグルドライブ(鍵をかけた中身)だけ(v0.13) -->
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://www.googleapis.com; manifest-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1e3a8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="日記">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>日記</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="top-row">
+      <div><h1 id="date">…</h1><span id="count" class="muted"></span></div>
+      <span class="spacer"></span>
+      <div class="top-btns">
+        <button type="button" id="btnset" class="small-btn" title="ボタンを足す・変える・並べ替える">ボタン設定</button>
+        <button type="button" id="places" class="small-btn" title="場所の名前を登録する・直す">場所</button>
+        <button type="button" id="stats" class="small-btn" title="移動手段・睡眠・食事の集計">統計</button>
+        <button type="button" id="export" class="small-btn" title="ファイルに書き出す・ファイルから読み込む">バックアップ</button>
+      </div>
+    </div>
+    <div class="daynav" role="group" aria-label="見る日">
+      <button type="button" id="day-prev" class="day-btn" aria-label="前の日">◀ 前の日</button>
+      <input type="date" id="day-pick" class="day-pick" aria-label="日を選ぶ">
+      <button type="button" id="day-next" class="day-btn" aria-label="次の日">次の日 ▶</button>
+      <button type="button" id="day-today" class="day-btn today" hidden>今日へ</button>
+    </div>
+  </header>
+
+  <div id="ios-install" class="install" hidden role="note">
+    <strong>ホーム画面に入れてください</strong>
+    <p>iPhone では、ホーム画面に入れずに使うと、しばらく開かないうちに記録が消されることがあります。</p>
+    <ol>
+      <li>下の <span class="kbd">共有</span>(四角から矢印が出ているボタン)を押す</li>
+      <li><span class="kbd">ホーム画面に追加</span> を押す</li>
+      <li>ホーム画面にできた「日記」から開く</li>
+    </ol>
+  </div>
+
+  <main class="main">
+    <div id="koyomi"></div>
+    <div id="memory"></div>
+    <div id="dayband" class="dayband"></div>
+    <div id="error" class="error" hidden></div>
+    <p id="empty" class="empty" hidden>まだ記録がありません。下のボタンを押すと、押した時刻で記録されます。文章や写真は「書く」から入れられます。</p>
+    <ol id="timeline" class="timeline" aria-label="今日のタイムライン"></ol>
+  </main>
+
+  <div id="toast" class="toast" hidden role="status"></div>
+
+  <footer class="dock">
+    <div id="ongoing" class="ongoing" hidden aria-label="続いているもの"></div>
+    <div id="movepick" class="movepick" hidden></div>
+    <div class="tabrow">
+      <div id="tabs" class="tabs" role="tablist" aria-label="ボタンの種類"></div>
+      <button type="button" id="dock-toggle" class="dock-toggle" aria-label="ボタンをしまう" aria-expanded="true">▾</button>
+    </div>
+    <div id="buttons" class="buttons" role="group" aria-label="いま記録する"></div>
+    <div class="write-row">
+      <button type="button" id="write" class="write-btn"><span aria-hidden="true">✏️</span> 書く(文章・写真)</button>
+      <button type="button" id="record" class="write-btn rec-btn2"><span aria-hidden="true">🎙️</span> 録音</button>
+    </div>
+    <div class="foot muted"><span id="version"></span> ・ <span id="where">記録はこの端末の中だけ</span> <span id="persist"></span>
+      <button type="button" id="sync-btn" class="sync-btn" title="グーグルドライブで、ほかの端末と記録を合わせる">☁ 同期</button></div>
+  </footer>
+
+  <div id="sheet" class="sheet" hidden></div>
+  <div id="viewer" class="viewer" hidden></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
