@@ -10,7 +10,7 @@ import { DEFAULT_SYMPTOMS, bowelPicker, bowelText, fmtSec, healthForm, healthLin
 import { PORTS, koyomiCard, parseTide } from './koyomiView.js'
 import { RADII, distance, fmtDist, matchPlace, measure } from './places.js'
 
-const VERSION = '0.18.7'
+const VERSION = '0.18.8'
 
 // kind は記録の種類の目印。いちど使ったら変えない(出社は v0.1 から 'arrive')。
 const TABS = [{ key: 'flow', label: '1日の流れ' }, { key: 'do', label: 'すること' }, { key: 'play', label: '遊び' }, { key: 'errand', label: '用事' }, { key: 'go', label: '外出・移動' }, { key: 'body', label: '体調・天気' }]
@@ -1702,9 +1702,9 @@ async function openStats() {
     const stWake = streak(all.filter(e => e.kind === 'wake').map(e => e.day))
     const stDiary = streak(all.filter(e => (e.text || '').trim() || photosOf(e).length).map(e => e.day))
     const BADGES = [[3, '🥉'], [7, '🥈'], [30, '🥇'], [100, '🏆'], [365, '👑']]
-    const badgeRow = (label, st) => h('div', { class: 'bd-row' },
-      h('div', { class: 'bd-name' }, h('strong', { text: label }), h('span', { class: 'st-sub', text: `いま ${st.cur}日 ・ いちばん長い ${st.best}日` })),
-      h('div', { class: 'bd-badges' }, ...BADGES.map(([n, ic]) => h('span', { class: 'bd' + (st.best >= n ? ' on' : ''), title: `${n}日続けた` }, h('b', { text: ic }), h('small', { text: `${n}日` })))))
+    const badgeRow = (label, st) => h('div', { class: 'bdg-row' },
+      h('div', { class: 'bdg-name' }, h('strong', { text: label }), h('span', { class: 'st-sub', text: `いま ${st.cur}日 ・ いちばん長い ${st.best}日` })),
+      h('div', { class: 'bdg-list' }, ...BADGES.map(([n, ic]) => h('span', { class: 'bdg' + (st.best >= n ? ' on' : ''), title: `${n}日続けた` }, h('b', { text: ic }), h('small', { text: `${n}日` })))))
     body.replaceChildren(
       h('div', { class: 'st-periods', role: 'tablist' }, ...PERIODS.map(p => h('button', { type: 'button', role: 'tab', class: 'tab', 'aria-selected': p.key === period ? 'true' : 'false', text: p.label,
         onclick: () => { period = p.key; try { localStorage.setItem(STATS_KEY, period) } catch { /* */ } paint() } }))),
