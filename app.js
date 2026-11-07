@@ -10,7 +10,7 @@ import { DEFAULT_SYMPTOMS, bowelPicker, bowelText, fmtSec, healthForm, healthLin
 import { PORTS, koyomiCard, parseTide } from './koyomiView.js'
 import { RADII, distance, fmtDist, matchPlace, measure } from './places.js'
 
-const VERSION = '0.18.8'
+const VERSION = '0.18.9'
 
 // kind は記録の種類の目印。いちど使ったら変えない(出社は v0.1 から 'arrive')。
 const TABS = [{ key: 'flow', label: '1日の流れ' }, { key: 'do', label: 'すること' }, { key: 'play', label: '遊び' }, { key: 'errand', label: '用事' }, { key: 'go', label: '外出・移動' }, { key: 'body', label: '体調・天気' }]
@@ -192,6 +192,7 @@ async function addLeg(id, mode) {
     const next = [...legs.slice(0, -1), { mode, at: last.at }]
     await putEntry({ ...cur, legs: next, moves: next.map(l => l.mode), updated_at: stamp(new Date()) })
     await render()
+    syncMovePick(id, mode)
     legPickedAt.set(id, Date.now())
     showToast(`${MOVE_BY[mode].icon} ${MOVE_BY[mode].label}に直しました`)
     return
@@ -201,6 +202,7 @@ async function addLeg(id, mode) {
   await putEntry({ ...cur, legs: next, moves: next.map(l => l.mode), updated_at: stamp(new Date()) })
   legPickedAt.set(id, Date.now())
   await render()
+  syncMovePick(id, mode)
   showToast(legs.length ? `${hm(at)} ${MOVE_BY[mode].icon} ${MOVE_BY[mode].label}に乗りかえました` : `${MOVE_BY[mode].icon} ${MOVE_BY[mode].label}で移動中`)
 }
 // 移動手段を1つ選ぶ(押した直後の欄・帯)
@@ -741,6 +743,12 @@ function backdateRow(e, ended, pressed) {
 
 // ボタンを押した直後: 件名・工程や移動手段を、その場で付ける(選ぶたびに保存)
 let movePickTimer = null
+// 押した直後の欄が開いているとき、その記録の移動手段が変わったら欄の色も合わせる
+let movePickSync = null
+function syncMovePick(id, mode) {
+  const s = movePickSync
+  if (s && s.id === id && s.row.isConnected) s.paint(mode)
+}
 function openMovePick(e, b, ended = [], pressed = new Date()) {
   const box = $('#movepick')
   clearTimeout(movePickTimer)
@@ -780,10 +788,11 @@ function openMovePick(e, b, ended = [], pressed = new Date()) {
 
     const row = h('div', {})
     const label = h('p', { class: 'mp-label', text: '最初の移動手段は?' })
-    const paintRow = (cur) => row.replaceChildren(modeRow(cur, async (m) => { await addLeg(e.id, m); paintRow(m) }))
+    const relabel = () => { label.textContent = '乗りかえたら、ここか上の帯で押してください(押した時刻から次の手段になります)' }
+
+    const paintRow = (cur) => { row.replaceChildren(modeRow(cur, (m) => addLeg(e.id, m))); if (cur) relabel() }
     paintRow(null)
-    const relabel = () => { label.textContent = '乗りかえたら、ここか下の帯で押してください(押した時刻から次の手段になります)' }
-    row.addEventListener('click', () => setTimeout(relabel, 0))
+    movePickSync = { id: e.id, row, paint: paintRow }
     parts.push(label, row)
   } else if (b.askMove) parts.push(h('p', { class: 'mp-label', text: '移動手段は?' }), movePicker([], (keys) => update({ moves: [...keys] })))
   if (b.form === 'bowel') parts.push(h('p', { class: 'mp-label', text: 'かたさは?' }), bowelPicker(null, (bw) => update({ bowel: bw })))
