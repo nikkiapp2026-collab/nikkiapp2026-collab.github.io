@@ -10,7 +10,7 @@ import { DEFAULT_SYMPTOMS, bowelPicker, bowelText, fmtSec, healthForm, healthLin
 import { PORTS, koyomiCard, parseTide } from './koyomiView.js'
 import { RADII, distance, fmtDist, matchPlace, measure } from './places.js'
 
-const VERSION = '0.20.2'
+const VERSION = '0.20.3'
 
 // kind は記録の種類の目印。いちど使ったら変えない(出社は v0.1 から 'arrive')。
 const TABS = [{ key: 'flow', label: '1日の流れ' }, { key: 'do', label: 'すること' }, { key: 'play', label: '遊び' }, { key: 'errand', label: '用事' }, { key: 'go', label: '外出・移動' }, { key: 'body', label: '体調・天気' }]
@@ -1790,8 +1790,7 @@ async function prtMdPage(d, o) {
   const dt = new Date(`${d.day}T12:00:00`)
   const wx = o.weather ? d.list.filter(e => e.weather).map(e => weatherText(e.weather)).filter(Boolean)[0] || '' : ''
   const hourOf = (at) => Number(at.slice(11, 13))
-  const first = d.list.length ? hourOf(d.list[0].at) : 8
-  const startH = Math.min(first, 6), rows = []
+  const startH = 0, rows = []
   for (let hh = startH; hh <= 24; hh++) rows.push({ hh, items: [], bar: false })
   const rowOf = (hh) => rows[Math.max(0, Math.min(rows.length - 1, hh - startH))]
   for (const e of d.list) {
@@ -1820,7 +1819,7 @@ async function prtMdPage(d, o) {
     h('p', { class: 'prt-md-note', text: sm }),
     h('div', { class: 'prt-md-grid' },
       h('div', { class: 'prt-md-rows' }, ...rows.map(r => h('div', { class: 'prt-md-row' + (r.bar ? ' bar' : '') },
-        h('span', { class: 'prt-md-num', text: r.hh >= 8 ? String(r.hh) : '' }),
+        h('span', { class: 'prt-md-num', text: String(r.hh) }),
         h('span', { class: 'prt-md-txt', text: r.items.join('　') })))),
       health.length ? h('div', { class: 'prt-md-side' }, h('p', { class: 'prt-md-sidet', text: '今日の体調' }), ...health.map(t => h('p', { text: t }))) : null),
     ...texts.map(t => h('p', { class: 'prt-md-free', text: t })),
