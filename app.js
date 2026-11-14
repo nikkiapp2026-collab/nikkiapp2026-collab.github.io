@@ -10,7 +10,7 @@ import { DEFAULT_SYMPTOMS, bowelPicker, bowelText, fmtSec, healthForm, healthLin
 import { PORTS, koyomiCard, parseTide } from './koyomiView.js'
 import { RADII, distance, fmtDist, matchPlace, measure } from './places.js'
 
-const VERSION = '0.21.8'
+const VERSION = '0.21.9'
 
 // kind は記録の種類の目印。いちど使ったら変えない(出社は v0.1 から 'arrive')。
 const BASE_TABS = [{ key: 'flow', label: '1日の流れ' }, { key: 'do', label: 'すること' }, { key: 'play', label: '遊び' }, { key: 'errand', label: '用事' }, { key: 'pet', label: 'ペット' }, { key: 'go', label: '外出・移動' }, { key: 'body', label: '体調・天気' }]
@@ -1014,7 +1014,11 @@ async function quickRecord(b) {
   // 同じボタンが続いている途中なら、それを終える(もう一度押す=終わった)
   const same = b.span ? ongoing.find(x => x.kind === b.kind) : null
   if (same) { closeMovePick(); await finishNow(same); setDockDown(true); return }
-  const e = { id: newId(), at: ts, day: dayOf(now), kind: b.kind, label: b.label, icon: b.icon, text: '', photos: [], created_at: ts, updated_at: ts, ...(b.span ? { span: true } : {}), ...(b.span && b.kind === 'arrive' ? { sname: SPAN_NAME.arrive } : {}) }
+
+  // 2本目の移動は始めない(押した時刻だけ記録。移動は1本のまま続く)
+  const moving = (b.span && b.askMove) ? ongoing.find(x => isMoveEntry(x) && x.kind !== b.kind) : null
+  const spanOn = b.span && !moving
+  const e = { id: newId(), at: ts, day: dayOf(now), kind: b.kind, label: b.label, icon: b.icon, text: '', photos: [], created_at: ts, updated_at: ts, ...(spanOn ? { span: true } : {}), ...(b.span && b.kind === 'arrive' ? { sname: SPAN_NAME.arrive } : {}) }
   // 組になっているもの(就寝→起床 など)を終える
   const ended = ongoing.filter(x => (END_BY[x.kind] || []).includes(b.kind))
   for (const x of ended) await putEntry({ ...x, end: ts, end_by: e.id, updated_at: ts })
@@ -1022,7 +1026,8 @@ async function quickRecord(b) {
   if (navigator.vibrate) navigator.vibrate(15)
   await render()
   const endTxt = ended.map(x => `「${spanNameOf(x) || x.label}」${fmtDur(durMin(x.at, ts))}`).join('・')
-  showToast(`${hm(e.at)} 「${b.label}」を${b.span ? '始めました' : '記録しました'}${endTxt ? `(${endTxt}を終えました)` : ''}`, [
+  showToast(moving ? `${hm(e.at)} 「${b.label}」を記録しました。「${moving.label}」からの移動が続いているので、移動はそのまま1本で続けます`
+    : `${hm(e.at)} 「${b.label}」を${spanOn ? '始めました' : '記録しました'}${endTxt ? `(${endTxt}を終えました)` : ''}`, [
     { label: '書き足す', fn: () => { closeMovePick(); openEditor(e.id) } },
     { label: '取り消す', fn: async () => {
       closeMovePick(); await deleteEntry(e.id)
