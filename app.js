@@ -10,7 +10,7 @@ import { DEFAULT_SYMPTOMS, bowelPicker, bowelText, fmtSec, healthForm, healthLin
 import { PORTS, koyomiCard, parseTide } from './koyomiView.js'
 import { RADII, distance, fmtDist, matchPlace, measure } from './places.js'
 
-const VERSION = '0.21.9'
+const VERSION = '0.21.10'
 
 // kind は記録の種類の目印。いちど使ったら変えない(出社は v0.1 から 'arrive')。
 const BASE_TABS = [{ key: 'flow', label: '1日の流れ' }, { key: 'do', label: 'すること' }, { key: 'play', label: '遊び' }, { key: 'errand', label: '用事' }, { key: 'pet', label: 'ペット' }, { key: 'go', label: '外出・移動' }, { key: 'body', label: '体調・天気' }]
@@ -546,7 +546,7 @@ async function render() {
   if (isToday) {
     const last = ul.lastElementChild
     if (last && last.scrollIntoView) last.scrollIntoView({ block: 'nearest' })
-  } else $('.main').scrollTop = 0
+  } else { $('.main').scrollTop = 0; if (document.documentElement.classList.contains('tight')) scrollTo(0, 0) }
 }
 
 // ---------- 1年前の今日(v0.18。今日を見ているときだけ。なければ先月の今日) ----------
@@ -3804,3 +3804,18 @@ main().catch(err => {
   $('#error').hidden = false
   $('#error').textContent = `うまく動きませんでした: ${err && err.message ? err.message : err}`
 })
+
+// 上の日付の欄が画面の3割をこえるときは「ゆったり表示」(html.tight): 上の欄は記録と一緒に上へ流れ、下のボタンの欄は下に止める
+function checkTight() {
+  const top = $('.top')
+  if (!top) return
+  const wasTight = document.documentElement.classList.contains('tight')
+  if (innerWidth >= 900) { document.documentElement.classList.remove('tight'); return }
+  const ratio = top.offsetHeight / innerHeight
+  // 行ったり来たりしないよう、入るのは 0.3 をこえたとき、出るのは 0.25 を切ったとき
+  const tight = wasTight ? ratio > 0.25 : ratio > 0.3
+  document.documentElement.classList.toggle('tight', tight)
+}
+addEventListener('resize', checkTight)
+requestAnimationFrame(checkTight)
+setTimeout(checkTight, 800)
