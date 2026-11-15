@@ -10,7 +10,7 @@ import { DEFAULT_SYMPTOMS, bowelPicker, bowelText, fmtSec, healthForm, healthLin
 import { PORTS, koyomiCard, parseTide } from './koyomiView.js'
 import { RADII, distance, fmtDist, matchPlace, measure } from './places.js'
 
-const VERSION = '0.21.13'
+const VERSION = '0.21.14'
 
 // kind は記録の種類の目印。いちど使ったら変えない(出社は v0.1 から 'arrive')。
 const BASE_TABS = [{ key: 'flow', label: '1日の流れ' }, { key: 'do', label: 'すること' }, { key: 'play', label: '遊び' }, { key: 'errand', label: '用事' }, { key: 'pet', label: 'ペット' }, { key: 'go', label: '外出・移動' }, { key: 'body', label: '体調・天気' }]
@@ -2186,12 +2186,16 @@ function fitZoom() {
   document.documentElement.style.setProperty('--app-h', `${innerHeight / z}px`)
 }
 addEventListener('resize', fitZoom)
+
+let backToSettings = false
+function returnToSettings() { if (!backToSettings) return false; backToSettings = false; openSettings('menu'); return true }
 function openSettings(view = 'menu') {
+  backToSettings = false
   const sheet = $('#sheet')
   const close = () => { sheet.hidden = true; sheet.replaceChildren(); document.body.classList.remove('no-scroll') }
   const items = [
-    { key: 'buttons', icon: '🔘', label: 'ボタン設定', sub: 'ボタンを足す・変える・並べ替える・タブ', open: () => { close(); openButtonSettings() } },
-    { key: 'places', icon: '📍', label: '場所', sub: '場所の名前を登録する・直す', open: () => { close(); openPlaces() } },
+    { key: 'buttons', icon: '🔘', label: 'ボタン設定', sub: 'ボタンを足す・変える・並べ替える・タブ', open: () => { close(); openButtonSettings(); backToSettings = true } },
+    { key: 'places', icon: '📍', label: '場所', sub: '場所の名前を登録する・直す', open: () => { close(); openPlaces(); backToSettings = true } },
     { key: 'display', icon: '🔤', label: '表示', sub: `文字の大きさ(いま: ${FONT_SCALES.find(x => x.key === fontScale()).label})` },
     { key: 'backup', icon: '💾', label: 'バックアップ', sub: 'ファイルに書き出す・ファイルから読み込む' },
     { key: 'sync', icon: '☁', label: '同期', sub: 'グーグルドライブで、ほかの端末と合わせる(鍵つき)' },
@@ -2203,8 +2207,8 @@ function openSettings(view = 'menu') {
   const cur = items.find(x => x.key === view)
   const head = view === 'menu'
     ? h('div', { class: 'sheet-top' }, h('h2', { text: '⚙ 設定' }), h('button', { type: 'button', class: 'link-btn', text: '閉じる', onclick: close }))
-    : h('div', { class: 'sheet-top' }, h('button', { type: 'button', class: 'link-btn', text: '◀ 設定', onclick: () => openSettings('menu') }),
-      h('h2', { text: `${cur.icon} ${cur.label}` }), h('button', { type: 'button', class: 'link-btn', text: '閉じる', onclick: close }))
+    : h('div', { class: 'sheet-top' }, h('h2', { text: `${cur.icon} ${cur.label}` }),
+      h('button', { type: 'button', class: 'link-btn', text: '◀ 設定にもどる', onclick: () => openSettings('menu') }))
   const body = view === 'menu'
     ? [h('div', { class: 'sm-list' }, ...items.map(x => h('button', { type: 'button', class: 'sm-row', onclick: () => (x.open ? x.open() : openSettings(x.key)) },
         h('span', { class: 'sm-icon', 'aria-hidden': 'true', text: x.icon }),
@@ -2605,7 +2609,7 @@ async function openStats() {
 // ---------- 場所の一覧(名前・住所・範囲を直す、消す、いまの場所を登録) ----------
 async function openPlaces() {
   const sheet = $('#sheet')
-  const close = () => { sheet.hidden = true; sheet.replaceChildren(); document.body.classList.remove('no-scroll'); render() }
+  const close = () => { sheet.hidden = true; sheet.replaceChildren(); document.body.classList.remove('no-scroll'); render(); returnToSettings() }
   const body = h('div', { class: 'sheet-body' })
   const msg = h('p', { class: 'bk-msg', 'aria-live': 'polite' })
   const all = await allEntries()
@@ -3121,7 +3125,7 @@ function openButtonSettings() {
   // (same は下の for の中で決まる)
   const msg = h('p', { class: 'ed-msg', 'aria-live': 'polite' })
   const body = h('div', { class: 'sheet-body' })
-  const close = () => { sheet.hidden = true; sheet.replaceChildren(); document.body.classList.remove('no-scroll') }
+  const close = () => { sheet.hidden = true; sheet.replaceChildren(); document.body.classList.remove('no-scroll'); returnToSettings() }
   const move = (b, d) => {
     const same = list.filter(x => x.tab === b.tab)
     const i = same.indexOf(b), j = i + d
