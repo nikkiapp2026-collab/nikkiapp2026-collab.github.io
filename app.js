@@ -10,7 +10,7 @@ import { DEFAULT_SYMPTOMS, bowelPicker, bowelText, fmtSec, healthForm, healthLin
 import { PORTS, koyomiCard, parseTide } from './koyomiView.js'
 import { RADII, distance, fmtDist, matchPlace, measure } from './places.js'
 
-const VERSION = '0.21.15'
+const VERSION = '0.21.16'
 
 // kind は記録の種類の目印。いちど使ったら変えない(出社は v0.1 から 'arrive')。
 const BASE_TABS = [{ key: 'flow', label: '1日の流れ' }, { key: 'do', label: 'すること' }, { key: 'play', label: '遊び' }, { key: 'errand', label: '用事' }, { key: 'pet', label: 'ペット' }, { key: 'go', label: '外出・移動' }, { key: 'body', label: '体調・天気' }]
@@ -85,6 +85,8 @@ const BTN_COLORS = [['red', '赤'], ['orange', 'だいだい'], ['yellow', '黄'
 const colorCls = (b) => (b && BTN_COLORS.some(c => c.key === b.color) ? ` btn-c-${b.color}` : '')
 // 時間の長さ(span: true のボタンは、押すと始まり、終わりを押すまで「続いているもの」になる)
 // 組: このボタンを押すと、続いている〇〇を終える(就寝→起床 など)
+// 押し忘れの代わりに終わらせる組(v0.21.16)。直す画面で「一緒に動かす」を最初からオフにする
+const STAND_IN_END = { lunch: ['out'], break: ['out'] }
 const END_BY = { sleep: ['wake'], leave: ['reach', 'arrive', 'home'], out: ['reach', 'home'], arrive: ['out'], lunch: ['resume', 'out'], break: ['resume', 'out'],
   goout: ['back', 'home'], trip: ['reach', 'arrive', 'home', 'back'], sail: ['portin', 'home'], launch: ['kikan'] }   // v0.21.3 出港 → 帰港
 // 長さの呼び名(就寝の長さは「睡眠」など)
@@ -1327,13 +1329,19 @@ async function openEditor(id, preset = {}) {
   if (editing) {
     const all = (await allEntries()).filter(x => x.id !== editing.id)
     const m16 = (v) => (v || '').slice(0, 16)
-    link.prev = all.filter(x => x.end && x.end_by === editing.id)
-    if (link.prev.length) link.pairedPrev = true
-    else link.prev = all.filter(x => x.end && m16(x.end) === m16(editing.at))
+
+    //   移動が 12:45〜22:28 の9時間になった)→ 昼休み・休憩を退社が終わらせたのは「再開の押し忘れ」の代わりで、組ではない。
+    //   この組み合わせ(STAND_IN_END)は最初からオフにし、退社を直すときも昼休み・休憩の終わりは動かさない
+    const standIn = (x, ender) => !!ender && (STAND_IN_END[x.kind] || []).includes(ender.kind)
+    const ended = all.filter(x => x.end && x.end_by === editing.id)
+    const real = ended.filter(x => !standIn(x, editing))
+    if (real.length) { link.prev = real; link.pairedPrev = true }
+    else if (!ended.length) link.prev = all.filter(x => x.end && m16(x.end) === m16(editing.at))
     if (editing.end) {
       const y = editing.end_by ? all.find(x => x.id === editing.end_by) : null
       link.next = y ? [y] : all.filter(x => m16(x.at) === m16(editing.end))
-      if (y) link.pairedNext = true
+      if (y && !standIn(editing, y)) link.pairedNext = true
+      if (y && standIn(editing, y)) link.standInNext = true
     }
   }
   const nameOf = (x) => spanNameOf(x) || x.label
@@ -1345,7 +1353,7 @@ async function openEditor(id, preset = {}) {
     ? h('div', { class: 'ed-links' },
       h('span', { class: 'ed-label', text: 'つながっている記録も一緒に動かす' }),
       link.prev.length ? h('label', { class: 'ed-link' }, prevChk, h('span', { text: link.prev.map(x => `前の「${nameOf(x)}」の終わり`).join('・') + (link.pairedPrev ? '' : '(時刻が同じだけ)') })) : null,
-      link.next.length ? h('label', { class: 'ed-link' }, nextChk, h('span', { text: link.next.map(x => `次の「${x.label}」の時刻`).join('・') + (link.pairedNext ? '' : '(時刻が同じだけ)') })) : null)
+      link.next.length ? h('label', { class: 'ed-link' }, nextChk, h('span', { text: link.next.map(x => `次の「${x.label}」の時刻`).join('・') + (link.pairedNext ? '' : link.standInNext ? '(押し忘れの代わりに終わらせただけ)' : '(時刻が同じだけ)') })) : null)
     : null
 
   // 種類
